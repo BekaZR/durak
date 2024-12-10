@@ -28,19 +28,6 @@ class RemoveUserCardCommand(Command):
     async def rollback(
         self, request: AttackRequestSchema, game: GameSchema, room: Room
     ) -> GameSchema:
-        game.deck = []
-        return game
-
-
-class AddUserCardCommand(Command):
-    async def execute(
-        self, request: AttackRequestSchema, game: GameSchema, room: Room
-    ) -> GameSchema:
-        game.seats[request.user.user_id].user.cards.remove(request.card)
-        return game
-
-    async def rollback(
-        self, request: AttackRequestSchema, game: GameSchema, room: Room
-    ) -> GameSchema:
-        game.deck = []
+        if request.card not in game.seats[request.user.user_id].user.cards:
+            game.seats[request.user.user_id].user.cards.append(request.card)
         return game
