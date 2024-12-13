@@ -2,15 +2,12 @@ from typing import Literal
 
 from pydantic import field_validator
 
+from domain.schema import BaseRequestSchema
 from domain.seat.exception import SeatPositionException
-from schemas.base import BaseSchema
-
-from domain.user.schema import BaseUserSchema
 
 
-class JoinRequestSchema(BaseSchema):
+class JoinRequestSchema(BaseRequestSchema):
     command: Literal["join"]
-    user: BaseUserSchema
     position: int
 
     @field_validator("position")

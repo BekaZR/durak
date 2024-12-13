@@ -8,3 +8,5 @@ class GameSchema(BaseSchema):
     seats: dict[int, SeatSchema]
     round: RoundSchema
     deck: list[CardSchema]
+    turn: list[int]
+    trump: CardSchema

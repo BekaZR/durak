@@ -1,12 +1,10 @@
 from typing import Literal
 
-from schemas.base import BaseSchema
+from domain.schema import BaseRequestSchema
 
 from domain.card.schema import CardSchema
-from domain.user.schema import BaseUserSchema
 
 
-class AttackRequestSchema(BaseSchema):
+class AttackRequestSchema(BaseRequestSchema):
     command: Literal["attack"]
-    user: BaseUserSchema
     card: CardSchema

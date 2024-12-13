@@ -5,13 +5,6 @@ from domain.card.schema import CardSchema
 
 
 class CardService:
-    def __init__(self, rank: str, suit: str) -> None:
-        self.rank = rank
-        self.suit = suit
-
-    def __repr__(self) -> str:
-        return f"{self.rank} of {self.suit}"
-
     @classmethod
     def create_deck(cls, deck_size: int) -> list[CardSchema]:
         ranks: list[str] = [
@@ -47,3 +40,22 @@ class CardService:
         deck = [CardSchema(rank=rank, suit=suit) for rank in ranks for suit in suits]
         random.shuffle(deck)
         return deck
+    
+    @staticmethod
+    def rank_value(rank: str) -> int:
+        rank_order = {
+            "2": 2,
+            "3": 3,
+            "4": 4,
+            "5": 5,
+            "6": 6,
+            "7": 7,
+            "8": 8,
+            "9": 9,
+            "10": 10,
+            "J": 11,
+            "Q": 12,
+            "K": 13,
+            "A": 14,
+        }
+        return rank_order.get(rank, 0)

@@ -1,10 +1,7 @@
 from typing import Literal
 
-from schemas.base import BaseSchema
-
-from domain.user.schema import BaseUserSchema
+from domain.schema import BaseRequestSchema
 
 
-class BeatRequestSchema(BaseSchema):
+class BeatRequestSchema(BaseRequestSchema):
     command: Literal["beat"]
-    user: BaseUserSchema
