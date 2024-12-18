@@ -4,6 +4,7 @@ from pydantic import field_validator
 
 from domain.schema import BaseRequestSchema
 from domain.seat.exception import SeatPositionException
+from domain.user.schema import BaseUserSchema
 
 
 class JoinRequestSchema(BaseRequestSchema):
@@ -15,3 +16,9 @@ class JoinRequestSchema(BaseRequestSchema):
         if position < 0 or position > 6:
             raise SeatPositionException
         return position
+
+
+class JoinResponseSchema(BaseRequestSchema):
+    command: Literal["join"]
+    position: int
+    user: BaseUserSchema

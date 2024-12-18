@@ -1,10 +1,8 @@
-from typing import Literal
-
-from domain.schema import BaseRequestSchema
-
-from domain.user.schema import BaseUserSchema
+from domain.user.types import UserID
+from schemas.base import BaseSchema
 
 
-class TakeRequestSchema(BaseRequestSchema):
-    command: Literal["take"]
-    user: BaseUserSchema
+class TurnSchema(BaseSchema):
+    currenct_attacker_user_id: UserID
+    current_defender_user_id: UserID
+    queue: list[UserID]

@@ -40,7 +40,7 @@ class CardService:
         deck = [CardSchema(rank=rank, suit=suit) for rank in ranks for suit in suits]
         random.shuffle(deck)
         return deck
-    
+
     @staticmethod
     def rank_value(rank: str) -> int:
         rank_order = {

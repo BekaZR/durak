@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     POSTGRES_HOST: str = "127.0.0.1"
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "sino0on"
+    POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = "durakservice"
     POSTGRES_ECHO: bool = False

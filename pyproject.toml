@@ -78,6 +78,11 @@ env = [
     "TEMPLATE_PROJECT_DB_BASE=fin_project_test",
 ]
 
+[tool.pyright]
+include = ["src"]
+extraPaths = ["src"]
+
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
