@@ -1,58 +1,35 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic
+from typing import TypeVar
 
 from db.models.room import Room
-from domain.user.schema import BaseUserSchema
+from domain.command.game.schema import GameSchema
+from domain.state.schema import GameStateSchema
 
 TRequest = TypeVar("TRequest")
 TResponse = TypeVar("TResponse")
 
 
-class Command(Generic[TRequest, TResponse], ABC):
-    @abstractmethod
-    async def execute(self, request: TRequest, game: TRequest, room: Room) -> TResponse:
-        pass
-
-    @abstractmethod
-    async def rollback(
-        self, request: TRequest, game: TRequest, room: Room
-    ) -> TResponse:
-        pass
-
-    @abstractmethod
-    async def notify_room(
-        self, user: BaseUserSchema, game: TRequest, room: Room
-    ) -> None:
-        pass
-
-    @abstractmethod
-    async def notify_personal(
-        self, user: BaseUserSchema, game: TRequest, room: Room
-    ) -> None:
-        pass
-
-
-class SupportCommand(Generic[TRequest, TResponse], ABC):
+class Command(ABC):
     @abstractmethod
     async def execute(
-        self, user: BaseUserSchema, game: TRequest, room: Room
-    ) -> TResponse:
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> GameSchema:
         pass
 
     @abstractmethod
     async def rollback(
-        self, user: BaseUserSchema, game: TRequest, room: Room
-    ) -> TResponse:
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> GameSchema:
         pass
 
     @abstractmethod
     async def notify_room(
-        self, user: BaseUserSchema, game: TRequest, room: Room
+        self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> None:
         pass
 
     @abstractmethod
     async def notify_personal(
-        self, user: BaseUserSchema, game: TRequest, room: Room
+        self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> None:
         pass

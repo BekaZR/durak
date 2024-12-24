@@ -1,6 +1,6 @@
 from db.crud.base import BaseCRUD
-from domain.timer.exception import TimerNotFound
-from domain.timer.schema import TimerCreateSchema
+from domain.command.timer.exception import TimerNotFound
+from domain.command.timer.schema import TimerCreateSchema
 from pydantic import TypeAdapter
 
 
@@ -40,7 +40,7 @@ class TimerCRUD(BaseCRUD):
 
     async def delete(self, room_id: int) -> None:
         key = self._key_prefix(room_id)
-        await self.redis.delete(key)
+        self.redis.delete(key)
 
     async def delete_by_user_id(self, room_id: int, user_id: int) -> None:
         key = self._key_prefix(room_id)

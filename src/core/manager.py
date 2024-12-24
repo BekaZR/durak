@@ -1,4 +1,4 @@
-from domain.user.schema import BaseUserSchema
+from domain.command.user.schema import BaseUserSchema
 
 
 class UserNotificationManager:

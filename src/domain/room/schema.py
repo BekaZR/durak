@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from db.enums.room import CardTransferPermission, DeckSize, PlayerCount, WalletType
 from schemas.base import BaseSchema
 
@@ -44,3 +45,8 @@ class RoomSchema(BaseSchema):
     # Game State
     balance_type: WalletType
     created_at: datetime
+
+
+class RoomResponseSchema(BaseSchema):
+    command: Literal["room"]
+    room: RoomSchema
