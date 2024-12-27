@@ -42,7 +42,7 @@ class GameController:
         ) and await controller_service.validate(
             request, game, room, [ReadyToStartStateValidator(), ReadyToStartValidator()]
         ):
-            await SwitchToReadyStrategy().execute(request=request, game=game, room=room)
+            await StartGameStrategy().execute(request=request, game=game, room=room)
             return game
 
         if isinstance(

@@ -1,4 +1,3 @@
-from re import I
 from exception.base import BackendError
 
 
@@ -8,8 +7,8 @@ class DefenderNotFound(BackendError):
 
 
 class AttackerNotFound(BackendError):
-    code = "defender_not_found"
-    description = "Defender not found"
+    code = "attacker_not_found"
+    description = "Attacker not found"
 
 
 class UserNotFound(BackendError):
@@ -20,3 +19,8 @@ class UserNotFound(BackendError):
 class UserAlreadyWinError(BackendError):
     code = "user already win"
     description = "User already win"
+
+
+class UserNotDefenderError(BackendError):
+    code = "user_not_defender"
+    description = "User not defender"

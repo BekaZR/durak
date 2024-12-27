@@ -20,7 +20,7 @@ class CreateDeckCardCommand(Command):
     async def execute(
         self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> GameSchema:
-        cards = CardService.create_deck(room.player_count)
+        cards = CardService().create_deck(room.player_count)
         game.deck = cards
         return game
 
@@ -237,10 +237,10 @@ class FindLowestCardPlayerCommand(Command):
         if not game.trump:
             raise TrumpNotExistsException()
         card_service = CardService()
-        lowest_card, user = await card_service._find_lowest_card_and_player(game)
-        if not lowest_card or not user:
+        user_id = await card_service.find_lowest_card_player(game)
+        if not user_id:
             raise AttackerNotFound()
-        request.user = user
+        request.user = game.seats[user_id].user.user
         return game
 
     async def rollback(

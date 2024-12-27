@@ -2,8 +2,9 @@ from urllib.parse import urljoin
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from yarl import URL
+from dotenv import load_dotenv
 
-# load_dotenv(".env", override=True)
+load_dotenv("../.env", override=True)
 
 
 class Settings(BaseSettings):

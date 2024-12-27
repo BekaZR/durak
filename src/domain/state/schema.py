@@ -25,3 +25,5 @@ class GameStateSchema(BaseSchema, Generic[TBaseSchema]):
     cards: Optional[list[CardSchema]] = Field(default=None)
 
     seats: Optional[dict[UserID, SeatSchema]] = Field(default=None)
+
+    update_turn: bool = Field(default=False)

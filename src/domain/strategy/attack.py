@@ -17,19 +17,23 @@ from domain.command.turn.command import (
 from domain.controller.base import GameController
 from domain.state.schema import GameStateSchema
 from domain.strategy.base import GameStrategy
-from domain.strategy.beat_execute import BeatExecuteStrategy
 from domain.strategy.ready import ReadyStrategy
 from domain.strategy.take_execute import TakeExecuteStrategy
 from domain.strategy.win import UserWinStrategy
 from exception.support import RequestNotSupportedError
 from domain.strategy.game import GameEndStrategy
 from domain.state.game import GameEndState
-from domain.state.round import RoundEndState
+from domain.state.round import AttackRoundEndState
 from domain.strategy.game import GameStartExecuteClassicStrategy
 from domain.strategy.round import RoundCreateStrategy, RoundEndStrategy
 
 
 class AttackStrategyClassic(GameStrategy):
+    async def validate(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> None:
+        pass
+
     async def execute(
         self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> GameSchema:
@@ -44,7 +48,7 @@ class AttackStrategyClassic(GameStrategy):
         await AttackCommand().execute(request=request, game=game, room=room)
         await RemoveUserCardCommand().execute(request=request, game=game, room=room)
         # check round is end
-        await RoundEndState().execute(request=request, game=game, room=room)
+        await AttackRoundEndState().execute(request=request, game=game, room=room)
 
         # if round is end
         if game.round.is_finalized:
@@ -54,13 +58,9 @@ class AttackStrategyClassic(GameStrategy):
                 await TakeExecuteStrategy().execute(
                     request=request, game=game, room=room
                 )
-            else:
-                # cards must be move to beat
-                await BeatExecuteStrategy().execute(
-                    request=request, game=game, room=room
-                )
             await RoundEndStrategy().execute(request=request, game=game, room=room)
             await RoundCreateStrategy().execute(request=request, game=game, room=room)
+            # TODO ADD Timer
             return game
 
         user_cards = game.seats[request.request.user.user_id].user.cards

@@ -5,6 +5,7 @@ from db.crud.game import GameCRUD
 from db.crud.room import RoomCRUD
 from db.dependencies import get_db_session
 from domain.command.join.schema import JoinRequestSchema, JoinResponseSchema
+from domain.state.schema import GameStateSchema
 from domain.strategy.join import JoinStrategy
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +22,11 @@ async def attack(
     game = await game_crud.get_by_id(room_id)
     room_crud = RoomCRUD(session=session)
     room = await room_crud.get_by_id(room_id)
-    await JoinStrategy().execute(request=request, game=game, room=room)
+    game_state = GameStateSchema(
+        request=request,
+    )
+    await JoinStrategy().validate(request=game_state, game=game, room=room)
+    await JoinStrategy().execute(request=game_state, game=game, room=room)
     response = JoinResponseSchema(
         command="join",
         user=request.user,

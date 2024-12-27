@@ -5,68 +5,126 @@ from domain.command.user.types import UserID
 
 
 class TurnService:
-    def create_all_players_queue(
-        self, seats: dict[UserID, SeatSchema], attacker_id: UserID
-    ) -> TurnSchema:
-        """Создает очередь где подкидывать могут все игроки"""
-        # Находим защищающегося
-        defender_id = self._get_next_player(seats, attacker_id)
-
-        # Все игроки кроме атакующего и защищающегося
-        queue = [
-            user_id
-            for user_id, seat in seats.items()
-            if seat.user.achieved == UserAchieved.PROCESSING
-            and user_id not in (attacker_id, defender_id)
-        ]
-        # Сортируем по позициям
-        queue.sort(key=lambda x: seats[x].position)
-
-        return TurnSchema(
-            currenct_attacker_user_id=attacker_id,
-            current_defender_user_id=defender_id,
-            queue=queue,
+    def _get_active_positions(self, seats: dict[UserID, SeatSchema]) -> list[int]:
+        # Get positions of active players
+        return sorted(
+            [
+                seat.position
+                for seat in seats.values()
+                if seat.user.achieved == UserAchieved.PROCESSING
+            ]
         )
+
+    def _get_next_position(self, current_pos: int, positions: list[int]) -> int:
+        current_idx = positions.index(current_pos)
+        return positions[(current_idx + 1) % len(positions)]
 
     def create_neighbors_queue(
-        self, seats: dict[UserID, SeatSchema], attacker_id: UserID
+        self, attacker_id: UserID, seats: dict[UserID, SeatSchema]
     ) -> TurnSchema:
-        """Создает очередь где подкидывать могут только соседи"""
-        # Находим защищающегося
-        defender_id = self._get_next_player(seats, attacker_id)
+        position_to_id = {seat.position: uid for uid, seat in seats.items()}
+        active_positions = self._get_active_positions(seats)
 
-        # Находим соседние позиции атакующего
-        attacker_position = seats[attacker_id].position
-        max_position = max(seat.position for seat in seats.values())
-        prev_pos = attacker_position - 1 if attacker_position > 0 else max_position
-        next_pos = attacker_position + 1 if attacker_position < max_position else 0
-
-        # Формируем очередь из соседей
-        queue = [
-            user_id
-            for user_id, seat in seats.items()
-            if seat.position in (prev_pos, next_pos)
-            and seat.user.achieved == UserAchieved.PROCESSING
-            and user_id != defender_id
-        ]
-
+        attacker_pos = seats[attacker_id].position
+        defender_pos = self._get_next_position(attacker_pos, active_positions)
+        next_pos = self._get_next_position(defender_pos, active_positions)
+        if next_pos == attacker_pos:
+            queue = [position_to_id[next_pos]]
+        else:
+            queue = [attacker_id, position_to_id[next_pos]]
         return TurnSchema(
             currenct_attacker_user_id=attacker_id,
-            current_defender_user_id=defender_id,
+            current_defender_user_id=position_to_id[defender_pos],
             queue=queue,
         )
 
-    def _get_next_player(
-        self, seats: dict[UserID, SeatSchema], current_player_id: UserID
-    ) -> UserID:
-        """Получить следующего игрока по кругу"""
-        current_position = seats[current_player_id].position
-        max_position = max(seat.position for seat in seats.values())
-        next_position = (current_position + 1) if current_position < max_position else 0
+    def create_all_players_queue(
+        self, attacker_id: UserID, seats: dict[UserID, SeatSchema]
+    ) -> TurnSchema:
+        position_to_id = {seat.position: uid for uid, seat in seats.items()}
+        active_positions = self._get_active_positions(seats)
 
-        return next(
-            user_id
-            for user_id, seat in seats.items()
-            if seat.position == next_position
-            and seat.user.achieved == UserAchieved.PROCESSING
+        attacker_pos = seats[attacker_id].position
+        defender_pos = self._get_next_position(attacker_pos, active_positions)
+
+        # Start building queue from position after defender
+        current_pos = defender_pos
+        queue = [attacker_id]
+
+        while True:
+            current_pos = self._get_next_position(current_pos, active_positions)
+            if current_pos == attacker_pos:
+                break
+            queue.append(position_to_id[current_pos])
+
+        return TurnSchema(
+            currenct_attacker_user_id=attacker_id,
+            current_defender_user_id=position_to_id[defender_pos],
+            queue=queue,
         )
+
+    def find_next_attacker_after_defense(
+        self, current_turn: TurnSchema, seats: dict[UserID, SeatSchema]
+    ) -> UserID:
+        """
+        Find the next attacker for the following round.
+
+        Args:
+            current_turn: Current turn state with attacker, defender and queue
+            seats: Dictionary of all seats with player states
+
+        Returns:
+            UserID of the next attacker
+        """
+
+        # who hasn't won/lost yet (is still PROCESSING)
+        defender_id = current_turn.current_defender_user_id
+        if seats[defender_id].user.achieved == UserAchieved.PROCESSING:
+            return defender_id
+
+        # If defender won, find next PROCESSING player
+        position_to_id = {seat.position: uid for uid, seat in seats.items()}
+        all_positions = sorted([seat.position for seat in seats.values()])
+        defender_pos = seats[defender_id].position
+
+        current_pos = defender_pos
+        while True:
+            current_pos = self._get_next_position(current_pos, all_positions)
+            current_id = position_to_id[current_pos]
+            if seats[current_id].user.achieved == UserAchieved.PROCESSING:
+                return current_id
+
+            if current_pos == defender_pos:
+                return defender_id
+
+    def find_next_attacker_after_take(
+        self, current_turn: TurnSchema, seats: dict[UserID, SeatSchema]
+    ) -> UserID:
+        """
+        Find the next attacker for the following round.
+
+        Args:
+            current_turn: Current turn state with attacker, defender and queue
+            seats: Dictionary of all seats with player states
+
+        Returns:
+            UserID of the next attacker
+        """
+
+        # who hasn't won/lost yet (is still PROCESSING)
+        position_to_id = {seat.position: uid for uid, seat in seats.items()}
+        all_positions = sorted([seat.position for seat in seats.values()])
+        defender_pos = seats[current_turn.current_defender_user_id].position
+
+        # Start checking from position after defender
+        current_pos = defender_pos
+        while True:
+            current_pos = self._get_next_position(current_pos, all_positions)
+            current_id = position_to_id[current_pos]
+            if seats[current_id].user.achieved == UserAchieved.PROCESSING:
+                return current_id
+
+            # If we've checked all positions and found no PROCESSING players,
+            # the game should be over, but we'll return defender as fallback
+            if current_pos == defender_pos:
+                return current_turn.current_defender_user_id

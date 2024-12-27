@@ -13,6 +13,7 @@ class TakeExecuteStrategy(GameStrategy):
     """
     WARNING: request.user required!!!
     """
+
     async def execute(
         self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> GameSchema:

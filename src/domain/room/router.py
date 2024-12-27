@@ -22,3 +22,14 @@ async def create_room(
     game = await CreateGameCommand().execute(game_state_schema, Any, room)
     await game_crud.create(game, room.id)
     return room
+
+
+@router.delete("/room/{room_id}")
+async def delete_room(
+    room_id: int, session: AsyncSession = Depends(get_db_session)
+) -> Any:
+    room_crud = RoomCRUD(session=session)
+    await room_crud.delete(room_id)
+    game_crud = GameCRUD()
+    await game_crud.delete(room_id)
+    return None

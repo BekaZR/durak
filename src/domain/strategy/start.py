@@ -15,6 +15,7 @@ from domain.controller.base import GameController
 from domain.state.schema import GameStateSchema
 from domain.strategy.base import GameStrategy
 from domain.strategy.distribution import InitialDealStrategy
+from core.logger import service_logger
 
 
 class StartGameStrategy(GameStrategy):
@@ -23,11 +24,15 @@ class StartGameStrategy(GameStrategy):
     ) -> GameSchema:
         await GameStartCommand().execute(request=request, game=game, room=room)
         await CreateDeckCardCommand().execute(request=request, game=game, room=room)
+        service_logger.debug(f"deck: {game.deck}")
         await InitialDealStrategy().execute(request=request, game=game, room=room)
+        service_logger.debug(f"dealing: {game.seats}")
         await RoundCreateCommand().execute(request=request, game=game, room=room)
+        service_logger.debug(f"create round: {game.round}")
         await FindLowestCardPlayerCommand().execute(
             request=request, game=game, room=room
         )
+        service_logger.debug(f"lower card: {request.user}")
         if room.card_transfer_permission == CardTransferPermission.NEIGHBORS_ONLY:
             await CreateNeighborsTurnCommand().execute(
                 request=request, game=game, room=room

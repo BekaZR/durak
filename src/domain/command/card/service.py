@@ -1,12 +1,11 @@
 import random
 from typing import Literal, Optional
 
-from domain.command.card.exception import TrumpNotExist
 from domain.command.card.schema import CardSchema
 from domain.command.game.schema import GameSchema
-from domain.command.slot.schema import SlotOutSchema
+from domain.command.turn.exception import TrumpNotExistsException
 from domain.command.user.exception import UserNotFound
-from domain.command.user.schema import BaseUserSchema, UserAchieved
+from domain.command.user.schema import UserAchieved
 from domain.command.user.types import UserID
 from domain.command.round.exception import RoundNotExistError
 from domain.command.user.exception import UserAlreadyWinError
@@ -16,7 +15,21 @@ from domain.command.slot.exception import CantBeatError
 
 class CardService:
     def get_ranks(self) -> list[str]:
-        return ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",]
+        return [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "J",
+            "Q",
+            "K",
+            "A",
+        ]
 
     def get_suits(self) -> list[Literal["hearts", "diamonds", "clubs", "spades"]]:
         return [
@@ -105,26 +118,102 @@ class CardService:
         allowed_ranks = {
             slot.attacker_card.rank for slot in game.round.slots if slot.attacker_card
         }
-        allowed_ranks.update({
-            slot.enemy_card.rank for slot in game.round.slots if slot.enemy_card
-        })
-        if not card.rank in allowed_ranks:
+        allowed_ranks.update(
+            {slot.enemy_card.rank for slot in game.round.slots if slot.enemy_card}
+        )
+        if card.rank not in allowed_ranks:
             raise CardNotInTableError()
         return None
 
-
-    def is_higher(self, attacker_card: CardSchema, enemy_card: CardSchema, trump_card: CardSchema) -> bool:
+    def is_higher(
+        self, attacker_card: CardSchema, enemy_card: CardSchema, trump_card: CardSchema
+    ) -> None:
         ranks = self.get_ranks()
         if attacker_card.suit == enemy_card.suit:
             if not ranks.index(enemy_card.rank) > ranks.index(attacker_card.rank):
                 raise CantBeatError()
         if enemy_card.suit == trump_card.suit and attacker_card.suit != trump_card.suit:
-            return True
-        return False
+            return None
+            raise CantBeatError()
 
-    def can_beat(self, attacking_card: CardSchema, defending_card: CardSchema, trump_card: CardSchema) -> bool:
+    def can_beat_validate(
+        self,
+        attacking_card: CardSchema,
+        defending_card: CardSchema,
+        trump_card: CardSchema,
+    ) -> None:
         if defending_card.suit == attacking_card.suit:
-            return self.is_higher(defending_card, attacking_card, trump_card)
+            self.is_higher(defending_card, attacking_card, trump_card)
+            return None
         if defending_card.suit == trump_card.suit:
-            return True
-        return False
+            return None
+        raise CantBeatError()
+
+    async def find_lowest_card_player(self, game: GameSchema) -> Optional[UserID]:
+        """
+        Find the player with the lowest trump card, or if no trump cards,
+        the lowest card overall.
+
+        Args:
+            game: Current game state containing player cards and trump suit
+
+        Returns:
+            Optional[UserID]: ID of player with lowest card, or None if no valid cards found
+
+        Raises:
+            TrumpNotExistsException: If trump card is not set in the game
+        """
+        if not game.trump:
+            raise TrumpNotExistsException()
+
+        lowest_trump_rank: Optional[str] = None
+        lowest_non_trump_rank: Optional[str] = None
+        lowest_trump_user_id: Optional[UserID] = None
+        lowest_non_trump_user_id: Optional[UserID] = None
+
+        # First pass - look for trump cards
+        for user_id, seat in game.seats.items():
+            if not seat.user.cards:  # Skip players without cards
+                continue
+            if seat.user.achieved != UserAchieved.PROCESSING:
+                continue
+
+            for card in seat.user.cards:
+                current_rank_value = CardService.rank_value(card.rank)
+
+                if card.suit == game.trump.suit:
+                    # Handle trump cards
+                    if (
+                        lowest_trump_rank is None
+                        or current_rank_value
+                        < CardService.rank_value(lowest_trump_rank)
+                    ):
+                        lowest_trump_rank = card.rank
+                        lowest_trump_user_id = user_id
+                else:
+                    # Handle non-trump cards
+                    if (
+                        lowest_non_trump_rank is None
+                        or current_rank_value
+                        < CardService.rank_value(lowest_non_trump_rank)
+                    ):
+                        lowest_non_trump_rank = card.rank
+                        lowest_non_trump_user_id = user_id
+
+        # Return trump card holder if exists, otherwise non-trump card holder
+        return (
+            lowest_trump_user_id
+            if lowest_trump_user_id is not None
+            else lowest_non_trump_user_id
+        )
+
+    async def get_all_cards_in_table(self, game: GameSchema) -> list[CardSchema]:
+        if game.round is None:
+            raise RoundNotExistError()
+        cards: list[CardSchema] = []
+        for slot in game.round.slots:
+            cards.append(slot.attacker_card)
+            if not slot.enemy_card:
+                continue
+            cards.append(slot.enemy_card)
+        return cards

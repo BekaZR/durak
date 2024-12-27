@@ -1,5 +1,6 @@
 from db.models.room import Room
-from domain.command.card.command import AddUserCardCommand, SetTrumpCardCommand
+from domain.command.card.command import AddUserCardFromDeckCommand, SetTrumpCardCommand
+from domain.command.card.exception import DeckNotExistError
 from domain.command.game.schema import GameSchema
 from domain.state.schema import GameStateSchema
 from domain.strategy.base import GameStrategy
@@ -14,7 +15,7 @@ class InitialDealStrategy(GameStrategy):
     ) -> GameSchema:
         """Стратегия начальной раздачи карт"""
         if not game.deck:
-            raise ValueError("Deck is empty")
+            raise DeckNotExistError()
 
         # Устанавливаем козырь через отдельную команду
         await SetTrumpCardCommand().execute(request=request, game=game, room=room)
@@ -36,7 +37,7 @@ class InitialDealStrategy(GameStrategy):
                 cards=cards,  # Передаем список карт вместо одной карты
             )
             # Выполняем команду добавления пачки карт
-            game = await AddUserCardCommand().execute(
+            game = await AddUserCardFromDeckCommand().execute(
                 request=deal_state, game=game, room=room
             )
 

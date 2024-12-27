@@ -24,7 +24,7 @@ from domain.strategy.win import UserWinStrategy
 from exception.support import RequestNotSupportedError
 from domain.strategy.game import GameEndStrategy
 from domain.state.game import GameEndState
-from domain.state.round import RoundEndState
+from domain.state.round import AttackRoundEndState
 from domain.strategy.game import GameStartExecuteClassicStrategy
 from domain.strategy.round import RoundCreateStrategy, RoundEndStrategy
 
@@ -44,7 +44,7 @@ class AttackStrategyClassic(GameStrategy):
         await AttackCommand().execute(request=request, game=game, room=room)
         await RemoveUserCardCommand().execute(request=request, game=game, room=room)
         # check round is end
-        await RoundEndState().execute(request=request, game=game, room=room)
+        await AttackRoundEndState().execute(request=request, game=game, room=room)
 
         # if round is end
         if game.round.is_finalized:

@@ -19,3 +19,8 @@ class CardNotInHandError(BackendError):
 class CardNotInTableError(BackendError):
     code = "card_not_in_table"
     description = "Card not in table"
+
+
+class DeckNotExistError(BackendError):
+    code = "deck_not_exist"
+    description = "Deck not exist"

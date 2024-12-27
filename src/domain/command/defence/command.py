@@ -6,7 +6,6 @@ from domain.command.base import Command
 from domain.command.defence.schema import DefenceRequestSchema, DefenceResponseSchema
 from domain.command.game.schema import GameSchema
 from domain.command.round.exception import RoundNotExistError
-from domain.command.slot.schema import SlotOutSchema
 from domain.state.schema import GameStateSchema
 from exception.support import RequestNotSupportedError
 
