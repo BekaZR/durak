@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from db.crud.timer import TimerCRUD
-from domain.command.timer.schema import TimerCreateSchema, TimerStatus
+from domain.command.timer.schema import TimerCreateSchema, TimerStatus, TimerType
 from domain.command.user.types import UserID
 
 
@@ -9,15 +9,18 @@ class TimerService:
     def __init__(self) -> None:
         self.timer_crud = TimerCRUD()
 
-    async def create(self, user_id: UserID, room_id: int, delay: int) -> None:
+    async def create(
+        self, user_id: UserID, room_id: int, delay: int, type: TimerType
+    ) -> TimerCreateSchema:
         datetime_now = datetime.now(tz=UTC)
         request = TimerCreateSchema(
             user_id=user_id,
             created_at=datetime_now,
             expired_at=datetime_now + timedelta(seconds=delay),
             status=TimerStatus.ACTIVE,
+            type=type,
         )
-        await self.timer_crud.create(request, room_id)
+        return await self.timer_crud.create(request, room_id)
 
     async def cancel(self, user_id: UserID, room_id: int) -> None:
         timer = await self.timer_crud.get_by_user_id(room_id, user_id=user_id)

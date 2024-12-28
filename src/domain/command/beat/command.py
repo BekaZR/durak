@@ -6,6 +6,7 @@ from domain.command.base import Command
 from domain.command.beat.schema import BeatRequestSchema, BeatResponseSchema
 from domain.command.game.schema import GameSchema
 from domain.command.round.exception import RoundNotExistError
+from domain.command.turn.exception import TurnNotExistError
 from domain.state.schema import GameStateSchema
 from exception.support import RequestNotSupportedError
 
@@ -19,6 +20,10 @@ class BeatCommand(Command):
             raise RequestNotSupportedError()
         if not game.round:
             raise RoundNotExistError()
+        if game.turn is None:
+            raise TurnNotExistError()
+        if game.turn:
+            game.turn.queue.pop(0)
         return game
 
     async def rollback(

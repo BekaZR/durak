@@ -4,12 +4,9 @@ from typing import Literal, Optional
 from domain.command.card.schema import CardSchema
 from domain.command.game.schema import GameSchema
 from domain.command.turn.exception import TrumpNotExistsException
-from domain.command.user.exception import UserNotFound
 from domain.command.user.schema import UserAchieved
 from domain.command.user.types import UserID
 from domain.command.round.exception import RoundNotExistError
-from domain.command.user.exception import UserAlreadyWinError
-from domain.command.card.exception import CardNotInHandError, CardNotInTableError
 from domain.command.slot.exception import CantBeatError
 
 
@@ -73,57 +70,6 @@ class CardService:
             "A": 14,
         }
         return rank_order.get(rank, 0)
-
-    def attack_with_card_validate(
-        self,
-        game: GameSchema,
-        user_id: UserID,
-        card: CardSchema,
-    ) -> None:
-        """
-        Validate if a player can attack with a specific card.
-
-        Args:
-            game: Current game state
-            user_id: ID of the attacking player
-            card: Card to attack with
-
-        Returns:
-            bool: True if the attack is valid, False otherwise
-
-        Raises:
-            RoundNotExistError: If there's no active round
-        """
-        # Basic validations
-        if not game.round:
-            raise RoundNotExistError()
-
-        # Player must be in game and active
-        if user_id not in game.seats:
-            raise UserNotFound()
-
-        player = game.seats[user_id].user
-        if player.achieved != UserAchieved.PROCESSING:
-            raise UserAlreadyWinError()
-
-        # Card must be in player's hand
-        if card not in player.cards:
-            raise CardNotInHandError()
-
-        # If this is the first attack of the round
-        if not game.round.slots:
-            return None
-
-        # For subsequent attacks in the round
-        allowed_ranks = {
-            slot.attacker_card.rank for slot in game.round.slots if slot.attacker_card
-        }
-        allowed_ranks.update(
-            {slot.enemy_card.rank for slot in game.round.slots if slot.enemy_card}
-        )
-        if card.rank not in allowed_ranks:
-            raise CardNotInTableError()
-        return None
 
     def is_higher(
         self, attacker_card: CardSchema, enemy_card: CardSchema, trump_card: CardSchema

@@ -1,36 +1,54 @@
-from pprint import pprint
+import asyncio
 from domain.command.seat.schema import SeatSchema
 from domain.command.turn.service import TurnService
-from domain.command.user.schema import UserSchema, BaseUserSchema, UserAchieved
+from domain.command.user.schema import (
+    BaseUserSchema,
+    UserAchieved,
+    UserConnect,
+    UserSchema,
+)
 from domain.command.user.types import UserID
 
 
-def test_create__players_queue() -> None:
-    """Test creating queue where all players can participate"""
+async def test_turn_service() -> None:
     seats: dict[UserID, SeatSchema] = {}
-    for i in range(6):
-        seats[i] = SeatSchema(
+    for user_id in range(4):
+        seat = SeatSchema(
             user=UserSchema(
-                user=BaseUserSchema(user_id=i, username=f"Player{i}"),
-                cards=[],
+                user=BaseUserSchema(user_id=user_id, username=f"{user_id}"),
                 achieved=UserAchieved.PROCESSING,
+                connect=UserConnect.CONNECTED,
+                cards=[],
             ),
-            position=i,
+            position=user_id,
         )
-    # pprint(seats)
-    seats[3].user.achieved = UserAchieved.WIN
-    seats[4].user.achieved = UserAchieved.WIN
-    seats[5].user.achieved = UserAchieved.WIN
-    seats[0].user.achieved = UserAchieved.WIN
-    queue = TurnService().create_neighbors_queue(attacker_id=1, seats=seats)
-    print()
-    pprint(queue.model_dump())
+        seats[user_id] = seat
 
-    # print(
-    #     TurnService().get_next_round_attacker_defender_took_card(
-    #         current_turn=queue, seats=seats
-    #     )
-    # )
+    turn_service = TurnService()
+
+    turn_schema = turn_service.create_all_players_queue(attacker_id=0, seats=seats)
+
+    print(turn_schema.model_dump())
+    # turn_schema.queue.pop(0)
+    # turn_schema.queue.pop(0)
+    # # turn_schema.queue.pop(0)
+    # turn_schema.queue.pop(0)
+    # seats[3].user.achieved = UserAchieved.WIN
+
+    # print(turn_schema.model_dump())
+    turn_schema.queue.pop(0)
+    turn_schema = await turn_service.restore_turn_system_all_players(
+        current_turn=turn_schema, seats=seats
+    )
+    turn_schema.queue.pop(0)
+    turn_schema = await turn_service.restore_turn_system_all_players(
+        current_turn=turn_schema, seats=seats
+    )
+    turn_schema.queue.pop(0)
+    turn_schema = await turn_service.restore_turn_system_all_players(
+        current_turn=turn_schema, seats=seats
+    )
+    print(turn_schema.model_dump())
 
 
-test_create__players_queue()
+asyncio.run(test_turn_service())

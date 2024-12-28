@@ -1,3 +1,4 @@
+from typing_extensions import Any
 from fastapi.responses import ORJSONResponse
 import httpx
 
@@ -16,7 +17,7 @@ async def logger_hook(request: httpx.Request) -> None:
     service_logger.info(f"Sending {request.content!r} to {request.url}")
 
 
-async def handle_backend_error(_, exc: BackendError):
+async def handle_backend_error(_: Any, exc: BackendError) -> ORJSONResponse:
     return ORJSONResponse(
         content={
             "code": exc.code,

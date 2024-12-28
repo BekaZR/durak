@@ -9,17 +9,21 @@ class TimerStatus(StrEnum):
     CANCELED = "CANCELED"
 
 
+class TimerType(StrEnum):
+    ATTACK = "ATTACK"
+    TAKE = "TAKE"
+    BEAT = "BEAT"
+
+
 class TimerCreateSchema(BaseSchema):
     user_id: int
     created_at: datetime
     expired_at: datetime
+    type: TimerType
     status: TimerStatus
 
 
 class TimerResponseSchema(BaseSchema):
     command: Literal["create_timer"]
-    user_id: int
-    created_at: datetime
-    expired_at: datetime
-    status: TimerStatus
+    timer: TimerCreateSchema
     position: int

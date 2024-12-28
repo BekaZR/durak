@@ -11,7 +11,7 @@ from domain.validate.ready import DublicateReadyValidate
 
 class SwitchToReadyStrategy(GameStrategy):
     async def execute(self, request: Any, game: GameSchema, room: Room) -> GameSchema:
-        game_state_schema = GameStateSchema(current_strategy=self)
+        game_state_schema: GameStateSchema = GameStateSchema(current_strategy=self)
         await GameReadyCommand().execute(
             request=game_state_schema, game=game, room=room
         )

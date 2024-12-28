@@ -1,3 +1,4 @@
+from db.enums.room import CardTransferPermission
 from domain.command.round.enum import RoundEnum
 from domain.command.round.exception import RoundNotExistError
 from domain.command.turn.service import TurnService
@@ -85,13 +86,59 @@ class TurnSetNextAttackerCommand(Command):
         if not game.round:
             raise RoundNotExistError()
         turn_service = TurnService()
+        next_attacker_id = turn_service.find_next_attacker_after_take(
+            current_turn=game.turn,
+            seats=game.seats,
+        )
         match game.round.status:
             case RoundEnum.TAKE:
                 next_attacker_id = turn_service.find_next_attacker_after_take(
                     current_turn=game.turn,
                     seats=game.seats,
                 )
+
         request.user = game.seats[next_attacker_id].user.user
+        return game
+
+    async def rollback(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> GameSchema:
+        game.turn = None
+        return game
+
+    async def notify_room(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> None:
+        raise NotImplementedError
+
+    async def notify_personal(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> None:
+        raise NotImplementedError
+
+
+class UpdateTurnCommand(Command):
+    async def execute(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> GameSchema:
+        if request.user is None:
+            raise UserNotFound()
+        if not game.turn:
+            raise TurnNotExistError()
+        if not game.round:
+            raise RoundNotExistError()
+        turn_service = TurnService()
+        match room.card_transfer_permission:
+            case CardTransferPermission.ALL_PLAYERS:
+                turn = await turn_service.restore_turn_system_all_players(
+                    current_turn=game.turn, seats=game.seats
+                )
+            case CardTransferPermission.NEIGHBORS_ONLY:
+                turn = await turn_service.restore_turn_system_neighbors(
+                    current_turn=game.turn, seats=game.seats
+                )
+
+        game.turn = turn
         return game
 
     async def rollback(

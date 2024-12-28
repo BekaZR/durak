@@ -2,12 +2,21 @@ from typing import Any, Generic, Optional, TypeVar
 from pydantic import Field
 from domain.command.card.schema import CardSchema
 from domain.command.seat.schema import SeatSchema
+from domain.command.timer.schema import (
+    TimerResponseSchema,
+    TimerType,
+)
 from domain.command.user.schema import BaseUserSchema
 from domain.command.user.types import UserID
 from domain.schema import BaseRequestSchema
 from schemas.base import BaseSchema
 
 TBaseSchema = TypeVar("TBaseSchema", bound=BaseRequestSchema)
+
+
+class TimerStateSchema(BaseSchema):
+    timer_type: TimerType
+    timer_response: TimerResponseSchema | None = Field(default=None)
 
 
 class GameStateSchema(BaseSchema, Generic[TBaseSchema]):
@@ -27,3 +36,5 @@ class GameStateSchema(BaseSchema, Generic[TBaseSchema]):
     seats: Optional[dict[UserID, SeatSchema]] = Field(default=None)
 
     update_turn: bool = Field(default=False)
+
+    timer: TimerStateSchema | None = Field(default=None)

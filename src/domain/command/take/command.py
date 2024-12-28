@@ -29,3 +29,13 @@ class TakeCommand(Command):
             return game
         game.round.status = RoundEnum.PROCESSING
         return game
+
+    async def notify_room(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> None:
+        raise NotImplementedError
+
+    async def notify_personal(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> None:
+        raise NotImplementedError

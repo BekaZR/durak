@@ -5,7 +5,7 @@ from db.models.room import Room
 from domain.command.base import Command
 from domain.command.game.schema import GameSchema
 from domain.state.schema import GameStateSchema
-from domain.command.timer.exception import TimerUserEmptyError
+from domain.command.timer.exception import TimerTypeNotExitstError, TimerUserEmptyError
 from domain.command.timer.schema import TimerResponseSchema
 from domain.command.timer.service import TimerService
 from exception.support import ObjNotSupportedError
@@ -17,11 +17,18 @@ class CreateTimerCommand(Command):
     ) -> GameSchema:
         if request.user is None:
             raise TimerUserEmptyError()
+        if request.timer is None:
+            raise TimerTypeNotExitstError()
         timer_service = TimerService()
-        await timer_service.create(
-            user_id=request.user.user_id, room_id=room.id, delay=60
+        user_id = request.user.user_id
+        timer_response = await timer_service.create(
+            user_id=user_id, room_id=room.id, delay=60, type=request.timer.timer_type
         )
-        # await self.notify_room(request, game, room)
+        position = game.seats[user_id].position
+        response = TimerResponseSchema(
+            timer=timer_response, command="create_timer", position=position
+        )
+        request.timer.timer_response = response
         return game
 
     async def rollback(
@@ -66,10 +73,6 @@ class CancelTimerCommand(Command):
     ) -> GameSchema:
         if request.user is None:
             raise TimerUserEmptyError()
-        timer_service = TimerService()
-        await timer_service.create(
-            user_id=request.user.user_id, room_id=room.id, delay=60
-        )
         return game
 
     async def notify_room(

@@ -1,45 +1,36 @@
 import asyncio
 from db.models.room import Room
-from domain.command.attack.command import AttackCommand
-from domain.command.attack.schema import AttackRequestSchema
-from domain.command.card.command import (
-    RemoveUserCardCommand,
-)
 from domain.command.game.schema import GameSchema
 from domain.command.round.enum import RoundEnum
 from domain.command.round.exception import RoundNotExistError
-from domain.command.slot.command import MaximumCommand
+from domain.command.take.command import TakeCommand
 from domain.controller.base import GameController
 from domain.state.schema import GameStateSchema
 from domain.strategy.base import GameStrategy
-from domain.strategy.defence import DefenceStrategy
+from domain.validate.take import TakePermissionValidate, UserEnemyValidate
 from exception.support import RequestNotSupportedError
+from domain.command.take.schema import TakeRequestSchema
 
 
 class TakeRequestStrategy(GameStrategy):
+    async def validate(
+        self, request: GameStateSchema, game: GameSchema, room: Room
+    ) -> None:
+        await UserEnemyValidate().validate(request=request, game=game, room=room)
+        await TakePermissionValidate().validate(request=request, game=game, room=room)
+
     async def execute(
         self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> GameSchema:
         if request.request is None or not isinstance(
-            request.request, AttackRequestSchema
+            request.request, TakeRequestSchema
         ):
             raise RequestNotSupportedError()
-        game = await AttackCommand().execute(request=request, game=game, room=room)
-        game = await RemoveUserCardCommand().execute(
-            request=request, game=game, room=room
-        )
+        _ = await TakeCommand().execute(request=request, game=game, room=room)
         if not game.round:
             raise RoundNotExistError()
         if game.round.status == RoundEnum.TAKE:
             request.next_strategy = self
-        else:
-            request.next_strategy = DefenceStrategy
-        game = await MaximumCommand().execute(request=request, game=game, room=room)
-        if not game.round:
-            raise RoundNotExistError()
-        if game.round.is_finalized:
-            if game.round.status == RoundEnum.TAKE:
-                ...
         asyncio.create_task(
             GameController().switch_delay(request=request, game=game, room=room)
         )

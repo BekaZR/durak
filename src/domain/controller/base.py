@@ -1,3 +1,4 @@
+from domain.command.join.command import DisconnectCommand
 import asyncio
 from typing import TYPE_CHECKING
 from db.models.room import Room
@@ -49,7 +50,13 @@ class GameController:
             request.current_strategy, StartGameStrategy
         ) and await controller_service.validate(request, game, room, []):
             return game
+        if isinstance(
+            request.current_strategy, SwitchToReadyStrategy
+        ) and await controller_service.validate(request, game, room, []):
+            for user_id, seat in game.seats.items():
 
+                await DisconnectCommand().execute(request=request, game=game, room=room)
+            return game
         return game
 
     async def switch_delay(

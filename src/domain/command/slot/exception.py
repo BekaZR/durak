@@ -14,3 +14,8 @@ class SlotIDOutOfRangeError(BackendError):
 class SlotAlreadyClosedError(BackendError):
     code = "slot_already_closed"
     description = "Slot already closed"
+
+
+class MaximumSlotsError(BackendError):
+    code = "maximum_slots_error"
+    description = "Maximum slots error"

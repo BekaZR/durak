@@ -1,10 +1,8 @@
-from db.enums.room import CardTransferPermission
 from db.models.room import Room
 from domain.command.game.schema import GameSchema
 from domain.command.round.command import RoundCreateCommand, RoundEndCommand
 from domain.command.turn.command import (
-    CreateAllPlayersTurnCommand,
-    CreateNeighborsTurnCommand,
+    UpdateTurnCommand,
 )
 from domain.command.turn.exception import TurnNotExistError
 from domain.state.schema import GameStateSchema
@@ -28,16 +26,6 @@ class RoundCreateStrategy(GameStrategy):
             raise TurnNotExistError()
         await RoundCreateCommand().execute(request=request, game=game, room=room)
         game.is_first_round = False
-
         await SetNextAttackerState().execute(request=request, game=game, room=room)
-
-        match room.card_transfer_permission:
-            case CardTransferPermission.NEIGHBORS_ONLY:
-                await CreateNeighborsTurnCommand().execute(
-                    request=request, game=game, room=room
-                )
-            case CardTransferPermission.ALL_PLAYERS:
-                await CreateAllPlayersTurnCommand().execute(
-                    request=request, game=game, room=room
-                )
+        await UpdateTurnCommand().execute(request=request, game=game, room=room)
         return game

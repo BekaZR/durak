@@ -1,4 +1,5 @@
 from domain.command.seat.schema import SeatSchema
+from domain.command.turn.exception import NeigborsNotExistError
 from domain.command.turn.schema import TurnSchema
 from domain.command.user.schema import UserAchieved
 from domain.command.user.types import UserID
@@ -36,6 +37,7 @@ class TurnService:
             currenct_attacker_user_id=attacker_id,
             current_defender_user_id=position_to_id[defender_pos],
             queue=queue,
+            neigbor_user_id=position_to_id[next_pos],
         )
 
     def create_all_players_queue(
@@ -128,3 +130,83 @@ class TurnService:
             # the game should be over, but we'll return defender as fallback
             if current_pos == defender_pos:
                 return current_turn.current_defender_user_id
+
+    # Current Implementation Analysis
+
+    async def restore_turn_system_all_players(
+        self, current_turn: TurnSchema, seats: dict[UserID, SeatSchema]
+    ) -> TurnSchema:
+        """
+        Восстанавливает очередь для всех игроков после успешной защиты.
+        Очередь должна начинаться с текущего первого игрока в очереди.
+        """
+        position_to_id = {seat.position: uid for uid, seat in seats.items()}
+        id_to_position = {uid: seat.position for uid, seat in seats.items()}
+        active_positions = self._get_active_positions(seats)
+
+        # Проверяем текущих активных игроков
+        active_players = {
+            uid
+            for uid, seat in seats.items()
+            if seat.user.achieved == UserAchieved.PROCESSING
+            and uid != current_turn.current_defender_user_id
+        }
+
+        # Определяем начальную позицию для новой очереди
+        if current_turn.queue:
+            # Если очередь не пуста, начинаем с первого игрока в текущей очереди
+            current_id = current_turn.queue[0]
+        else:
+            # Если очередь пуста, начинаем с текущего атакующего
+            current_id = current_turn.currenct_attacker_user_id
+
+        # Собираем новую очередь, сохраняя порядок
+        new_queue = []
+        current_pos = id_to_position[current_id]
+        seen_positions = {current_pos}
+
+        while True:
+            if position_to_id[current_pos] in active_players:
+                new_queue.append(position_to_id[current_pos])
+
+            current_pos = self._get_next_position(current_pos, active_positions)
+            if current_pos in seen_positions:
+                break
+            seen_positions.add(current_pos)
+
+        return TurnSchema(
+            currenct_attacker_user_id=current_turn.currenct_attacker_user_id,
+            current_defender_user_id=current_turn.current_defender_user_id,
+            neigbor_user_id=None,
+            queue=new_queue,
+        )
+
+    async def restore_turn_system_neighbors(
+        self, current_turn: TurnSchema, seats: dict[UserID, SeatSchema]
+    ) -> TurnSchema:
+        """
+        Восстанавливает очередь для соседей после успешной защиты.
+        Если сосед выбыл из игры, в очереди остается только исходный атакующий.
+        """
+        queue = []
+        if current_turn.neigbor_user_id is None:
+            raise NeigborsNotExistError()
+        # Если сосед все еще в игре, добавляем его и атакующего
+        if seats[current_turn.neigbor_user_id].user.achieved == UserAchieved.PROCESSING:
+            queue = [
+                current_turn.neigbor_user_id,
+                current_turn.currenct_attacker_user_id,
+            ]
+        # Если сосед выбыл, добавляем только атакующего
+        elif (
+            seats[current_turn.currenct_attacker_user_id].user.achieved
+            == UserAchieved.PROCESSING
+        ):
+            queue = [current_turn.currenct_attacker_user_id]
+
+        return TurnSchema(
+            currenct_attacker_user_id=current_turn.currenct_attacker_user_id,
+            current_defender_user_id=current_turn.current_defender_user_id,
+            neigbor_user_id=current_turn.neigbor_user_id,
+            queue=queue,
+        )

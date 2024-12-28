@@ -3,10 +3,10 @@ from domain.command.game.schema import GameSchema
 from domain.command.round.enum import RoundEnum
 from domain.command.round.exception import RoundNotExistError
 from domain.command.turn.exception import TurnNotExistError
+from domain.command.turn.service import TurnService
 from domain.command.user.exception import UserNotFound
 from domain.state.base import GameState
 from domain.state.schema import GameStateSchema
-from hello import TurnService
 
 
 class SetNextAttackerState(GameState):
