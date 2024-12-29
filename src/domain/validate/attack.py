@@ -47,6 +47,7 @@ class AttackMaximumSlotsValidate(BaseValidate):
 
         free_slots = await slot_service.get_free_slots(game.round.slots)
         enemy_cards = game.seats[game.turn.current_defender_user_id].user.cards
+
         if len(free_slots) >= len(enemy_cards):
             raise MaximumSlotsError()
 

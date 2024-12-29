@@ -274,7 +274,7 @@ class AddCardToBeatCommand(Command):
             if not slot.enemy_card:
                 continue
             cards.append(slot.enemy_card)
-        game.deck.extend(cards)
+        game.beats.extend(cards)
         return game
 
     async def rollback(

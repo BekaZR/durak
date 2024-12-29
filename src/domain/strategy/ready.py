@@ -6,7 +6,9 @@ from domain.command.game.command import GameReadyCommand
 from domain.command.game.schema import GameSchema
 from domain.state.schema import GameStateSchema
 from domain.strategy.base import GameStrategy
+from domain.timer.disconnect import DisconnectTimer
 from domain.validate.ready import DublicateReadyValidate
+import asyncio
 
 
 class SwitchToReadyStrategy(GameStrategy):
@@ -15,6 +17,12 @@ class SwitchToReadyStrategy(GameStrategy):
         await GameReadyCommand().execute(
             request=game_state_schema, game=game, room=room
         )
+        for user_id, seat in game.seats.items():
+            asyncio.create_task(
+                DisconnectTimer().execute(
+                    request=game_state_schema, game=game, room=room
+                )
+            )
         return await GameController().switch(
             request=game_state_schema, game=game, room=room
         )

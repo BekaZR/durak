@@ -14,9 +14,11 @@ class GameEndState(GameState):
         for _, seat in game.seats.items():
             if seat.user.achieved == UserAchieved.PROCESSING:
                 active_user_count += 1
+                request.user = seat.user.user
         match active_user_count:
             case 1:
                 game.status = GameStatus.FINISHED
             case _:
+                request.user = None
                 pass
         return game

@@ -13,6 +13,7 @@ class TimerType(StrEnum):
     ATTACK = "ATTACK"
     TAKE = "TAKE"
     BEAT = "BEAT"
+    DISCONNECT = "DISCONNECT"
 
 
 class TimerCreateSchema(BaseSchema):

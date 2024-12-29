@@ -1,25 +1,32 @@
 import asyncio
 from db.crud.timer import TimerCRUD
-from db.enums.room import CardTransferPermission
 from db.models.room import Room
 from domain.command.card.command import (
     RemoveUserCardCommand,
 )
 from domain.command.defence.schema import DefenceRequestSchema
+from domain.command.game.enums import GameStatus
 from domain.command.game.schema import GameSchema
 from domain.command.round.exception import RoundNotExistError
+from domain.command.slot.service import SlotService
+from domain.command.timer.command import CancelTimerCommand
 from domain.command.timer.schema import TimerStatus
 from domain.command.turn.command import (
-    CreateAllPlayersTurnCommand,
-    CreateNeighborsTurnCommand,
+    UpdateTurnCommand,
 )
 from domain.controller.base import GameController
+from domain.state.game import GameEndState
 from domain.state.round import DefenceRoundEndState
 from domain.state.schema import GameStateSchema
 from domain.state.slot import DefenceNewCardInTableState
 from domain.strategy.base import GameStrategy
 from domain.strategy.beat_execute import BeatExecuteStrategy
+from domain.strategy.game import GameEndStrategy, GameStartExecuteClassicStrategy
+from domain.strategy.ready import SwitchToReadyStrategy
 from domain.strategy.round import RoundCreateStrategy, RoundEndStrategy
+from domain.timer.attack import AttackTimer
+from domain.timer.beat import BeatTimer
+from domain.timer.take import TakeTimer
 from domain.validate.defence import (
     DefenceCandBeatValidate,
     DefenceCandDefenceRoundValidate,
@@ -57,38 +64,56 @@ class DefenceStrategy(GameStrategy):
         if not game.round:
             raise RoundNotExistError()
 
-        await DefenceCommand().execute(request=request, game=game, room=room)
-        await RemoveUserCardCommand().execute(request=request, game=game, room=room)
-        await DefenceNewCardInTableState().execute(
+        _ = await DefenceCommand().execute(request=request, game=game, room=room)
+        _ = await RemoveUserCardCommand().execute(request=request, game=game, room=room)
+        _ = await DefenceNewCardInTableState().execute(
             request=request, game=game, room=room
         )
+        _ = await CancelTimerCommand().execute(request=request, game=game, room=room)
 
-        if request.update_turn:
-            match room.card_transfer_permission:
-                case CardTransferPermission.NEIGHBORS_ONLY:
-                    await CreateNeighborsTurnCommand().execute(
-                        request=request, game=game, room=room
-                    )
-                case CardTransferPermission.ALL_PLAYERS:
-                    await CreateAllPlayersTurnCommand().execute(
-                        request=request, game=game, room=room
-                    )
-            request.update_turn = False
-        await DefenceRoundEndState().execute(request=request, game=game, room=room)
+        _ = await DefenceRoundEndState().execute(request=request, game=game, room=room)
+        _ = await GameEndState().execute(request=request, game=game, room=room)
 
         if game.round.is_finalized:
-            await BeatExecuteStrategy().execute(request=request, game=game, room=room)
-            await RoundEndStrategy().execute(request=request, game=game, room=room)
-            await RoundCreateStrategy().execute(request=request, game=game, room=room)
+            _ = await BeatExecuteStrategy().execute(
+                request=request, game=game, room=room
+            )
+            _ = await RoundEndStrategy().execute(request=request, game=game, room=room)
 
+        if game.status == GameStatus.FINISHED:
+            request.seats = game.seats
+            request.next_strategy = GameEndStrategy
+            _ = await GameController().switch(request=request, game=game, room=room)
+            request.next_strategy = GameStartExecuteClassicStrategy
+            _ = await GameController().switch(request=request, game=game, room=room)
+            request.next_strategy = SwitchToReadyStrategy
+            _ = await GameController().switch(request=request, game=game, room=room)
             return game
 
-        request.next_strategy = DefenceStrategy()
-        asyncio.create_task(
-            GameController().switch_delay(request=request, game=game, room=room)
-        )
-        request.current_command = self
-        return await GameController().switch(request=request, game=game, room=room)
+        if game.round.is_finalized:
+            _ = await RoundCreateStrategy().execute(
+                request=request, game=game, room=room
+            )
+            asyncio.create_task(
+                AttackTimer().execute(request=request, game=game, room=room)
+            )
+            return game
+
+        if request.update_turn:
+            _ = await UpdateTurnCommand().execute(request=request, game=game, room=room)
+            request.update_turn = False
+
+        slot_service = SlotService()
+        slots_status = await slot_service.get_all_slots_status(game.round.slots)
+        if all(slots_status):
+            asyncio.create_task(
+                BeatTimer().execute(request=request, game=game, room=room)
+            )
+        else:
+            asyncio.create_task(
+                TakeTimer().execute(request=request, game=game, room=room)
+            )
+        return game
 
     async def execute_delay(
         self, request: GameStateSchema, game: GameSchema, room: Room, delay: int = 0

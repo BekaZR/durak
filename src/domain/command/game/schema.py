@@ -12,6 +12,7 @@ class GameSchema(BaseSchema):
     seats: dict[UserID, SeatSchema]
     round: RoundSchema | None = Field(default=None)
     deck: list[CardSchema]
+    beats: list[CardSchema]
     turn: TurnSchema | None = Field(default=None)
     trump: CardSchema | None = Field(default=None)
     status: GameStatus

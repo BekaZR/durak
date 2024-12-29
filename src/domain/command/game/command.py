@@ -23,6 +23,7 @@ class CreateGameCommand(Command):
             deck=[],
             round=None,
             status=GameStatus.STARTED,
+            beats=[],
             is_first_round=True,
         )
         await game_crud.create(game, room.id)

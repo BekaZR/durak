@@ -1,3 +1,4 @@
+import asyncio
 from db.enums.room import CardTransferPermission
 from db.models.room import Room
 from domain.command.card.command import (
@@ -15,24 +16,20 @@ from domain.controller.base import GameController
 from domain.state.schema import GameStateSchema
 from domain.strategy.base import GameStrategy
 from domain.strategy.distribution import InitialDealStrategy
-from core.logger import service_logger
+from domain.timer.attack import AttackTimer
 
 
 class StartGameStrategy(GameStrategy):
     async def execute(
         self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> GameSchema:
-        await GameStartCommand().execute(request=request, game=game, room=room)
-        await CreateDeckCardCommand().execute(request=request, game=game, room=room)
-        service_logger.debug(f"deck: {game.deck}")
-        await InitialDealStrategy().execute(request=request, game=game, room=room)
-        service_logger.debug(f"dealing: {game.seats}")
-        await RoundCreateCommand().execute(request=request, game=game, room=room)
-        service_logger.debug(f"create round: {game.round}")
-        await FindLowestCardPlayerCommand().execute(
+        _ = await GameStartCommand().execute(request=request, game=game, room=room)
+        _ = await CreateDeckCardCommand().execute(request=request, game=game, room=room)
+        _ = await InitialDealStrategy().execute(request=request, game=game, room=room)
+        _ = await RoundCreateCommand().execute(request=request, game=game, room=room)
+        _ = await FindLowestCardPlayerCommand().execute(
             request=request, game=game, room=room
         )
-        service_logger.debug(f"lower card: {request.user}")
         if room.card_transfer_permission == CardTransferPermission.NEIGHBORS_ONLY:
             await CreateNeighborsTurnCommand().execute(
                 request=request, game=game, room=room
@@ -41,4 +38,7 @@ class StartGameStrategy(GameStrategy):
             await CreateAllPlayersTurnCommand().execute(
                 request=request, game=game, room=room
             )
+        asyncio.create_task(
+            AttackTimer().execute(request=request, game=game, room=room)
+        )
         return await GameController().switch(request=request, game=game, room=room)

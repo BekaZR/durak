@@ -57,7 +57,7 @@ class JoinCommand(Command):
         raise NotImplementedError
 
 
-class DisconnectCommand(Command):
+class DeleteUserCommand(Command):
     async def execute(
         self, request: GameStateSchema, game: GameSchema, room: Room
     ) -> GameSchema:
